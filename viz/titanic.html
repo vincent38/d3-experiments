@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style type="text/css" media="screen, print">
+			body { margin: 30px 50px; font-family: sans-serif; }
+			.dead  { opacity: .25; }
+			.alive { opacity: 1.; fill-opacity:.01; stroke: black; }
+		</style>
+		<title>Titanic</title>
+	</head>
+	<body>
+		<header>
+			<a href="..">&larr; Back to the main menu</a>
+		</header>
+		<h1>Titanic</h1>
+
+		<script src="../vendor/d3/d3.js"></script>
+		<script>
+
+var body = d3.select("body");
+
+// Useful margins and scales
+var margin = {top: 10, right: 10, bottom: 20, left: 50},
+    width  = 700 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scaleLinear()
+    .range([0, width]);
+
+// Using the ScaleLog extension w/ the according domain
+var y = d3.scaleLog()
+    .range([height, 0]);
+
+x.domain([0, 80]).nice();
+y.domain([1e0, 1e3]).nice();
+
+d3.tsv("../data/titanic.tsv", d => (
+	{
+		name:     d.name,
+		age:     +d.age,
+		fare:    +d.fare,
+		survived: d.survived,
+		sex: d.sex
+	}
+)).then(function(data) {
+	// With log, cannot consider the "free trips" anymore.
+	data = data.filter(d => !isNaN(d.age) & !isNaN(d.fare) & d.fare > 0.0);
+	
+	var svg = body.append('div').append('svg')
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+	// Create the markers for the women
+	var g = svg.selectAll('.rowF')
+	    .data(data)
+          .enter()
+		  .filter((d, i) => d.sex == 'female' ? true : false).append('circle')
+            .attr('class', 'rowF')
+			.attr('class', function(d){
+				return d.survived == '0' ? 'dead' : 'alive';
+			})
+			.attr('title', d => d.name)
+            .attr('transform', d => `translate(${x(d.age)},${y(d.fare)})`)
+            .attr('r', 2);
+
+	// And then for the men
+	var g = svg.selectAll('.rowM')
+	    .data(data)
+          .enter()
+		  .filter((d, i) => d.sex == 'male' ? true : false).append('rect')
+            .attr('class', 'rowM')
+			.attr('class', function(d){
+				return d.survived == '0' ? 'dead' : 'alive';
+			})
+			.attr('title', d => d.name)
+			.attr("width", "5")
+			.attr("height", "5")
+            .attr('transform', d => `translate(${x(d.age)-2.5},${y(d.fare)-2.5})`);
+	
+	// Then define the axis and put them on the svg
+	var xAxis = d3.axisBottom(x);
+    svg.append('g')
+        .attr('transform', `translate(0,${y(1e0)})`)
+        .call(xAxis.ticks(20/5).tickSize(-10));
+    svg.append('g')
+        .attr('transform', `translate(0,${y(1e0)})`)
+        .call(xAxis.ticks(20/1).tickSize(-5).tickFormat(''));
+
+    var yAxis = d3.axisLeft(y);
+	svg.append('g')
+        .attr('transform', `translate(${x(0)-10})`)
+        .call(yAxis.ticks().tickSize(5));
+});
+
+		</script>
+	</body>
+</html>

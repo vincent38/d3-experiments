@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style type="text/css" media="screen, print">
+			body { margin: 30px 50px; font-family: sans-serif; }
+		</style>
+		<title>Cars</title>
+	</head>
+	<body>
+		<header>
+			<a href="..">&larr; Back to the main menu</a>
+		</header>
+		<h1>Cars</h1>
+		<p>Consumption (MPG) by Weight of the car, with Manufacturing Year and Origin</p>
+
+		<script src="../vendor/d3/d3.js"></script>
+		<script src="../vendor/d3-scale-chromatic/d3-scale-chromatic.js"></script>
+		<script>
+
+var body = d3.select("body");
+
+// Useful margins and scales
+var margin = {top: 10, right: 150, bottom: 20, left: 50},
+    width  = 850 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scaleLinear()
+    .range([0, width]);
+
+// Using the ScaleLog extension w/ the according domain
+var y = d3.scaleLinear()
+    .range([height, 0]);
+
+// New scale for the Manufacturing Year representation
+var carsYears = d3.scaleSequential(d3.interpolateBlues);
+
+// Manually defined domains.
+x.domain([0, 5500]).nice();
+y.domain([0, 50]).nice();
+carsYears.domain([1970, 1982]).nice();
+
+d3.tsv("../data/cars.tsv", d => (
+	{
+		name:   d.name,
+		year:  +d.year,
+		origin: d.origin,
+		mpg: d.mpg,
+		weight: d.weight
+	}
+)).then(function(data) {
+	/*body.selectAll('.car')
+    	.data(data)
+	  .enter().append('div')
+	    .attr('class', 'car')
+	    .text((d, i) => `${i}. ${d.name} (${d.year}, ${d.origin})`)*/
+	
+	data = data.filter(d => !isNaN(d.mpg) & !isNaN(d.weight) & !isNaN(d.year));
+	
+	var svg = body.append('div').append('svg')
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+	// Create the markers for Europe
+	var g = svg.selectAll('.euro')
+	    .data(data)
+          .enter()
+		  .filter((d, i) => d.origin == 'Europe' ? true : false).append('circle')
+            .attr('class', 'euro')
+			.attr('title', d => d.name + " - " + d.year)
+            .attr('transform', d => `translate(${x(d.weight)},${y(d.mpg)})`)
+            .attr('r', 3)
+			.attr('stroke', d => `${carsYears(d.year)}`)
+			.attr('fill', 'none');
+
+	// And then for Japan
+	var g = svg.selectAll('.jp')
+	    .data(data)
+          .enter()
+		  .filter((d, i) => d.origin == 'Japan' ? true : false).append('rect')
+            .attr('class', 'jp')
+			.attr('title', d => d.name + " - " + d.year)
+			.attr("width", "5")
+			.attr("height", "5")
+			.attr('stroke', d => `${carsYears(d.year)}`)
+			.attr('fill', 'none')
+            .attr('transform', d => `translate(${x(d.weight)-2.5},${y(d.mpg)-2.5})`);
+
+	// And finally for the US
+	var g = svg.selectAll('.usa')
+		.data(data)
+          .enter()
+		  .filter((d, i) => d.origin == 'USA' ? true : false).append('path')
+            .attr('class', 'usa')
+			.attr('title', d => d.name + " - " + d.year)
+			.attr('d', 'M -4,0 L 4,0 M 0,-4 L 0,4')
+			.attr('stroke', d => `${carsYears(d.year)}`)
+            .attr('transform', d => `translate(${x(d.weight)-4},${y(d.mpg)-4})`);
+	
+	// Then define the axis and put them on the svg
+	var xAxis = d3.axisBottom(x);
+    svg.append('g')
+        .attr('transform', `translate(0,${y(0)})`)
+        .call(xAxis.ticks(12).tickSize(-10));
+
+    var yAxis = d3.axisLeft(y);
+	svg.append('g')
+        .attr('transform', `translate(${x(0)-10})`)
+        .call(yAxis.ticks().tickSize(5));
+
+	// Bonus part - Legend
+
+	// Manual definitions for the countries, as they use different forms
+	svg.append("circle").attr("r", 5).attr("fill", "none").attr("stroke", "black").attr('transform', `translate(${x(5500) + 10}, ${y(45)-4.5})`)
+	svg.append("rect").attr("width", "10").attr("height", "10").attr("fill", "none").attr("stroke", "black").attr('transform', `translate(${x(5500) + 5}, ${y(43)-9})`)
+	svg.append("path").attr('d', 'M -4,0 L 4,0 M 0,-4 L 0,4').attr("stroke", "black").attr('transform', `translate(${x(5500) + 10}, ${y(41)-3})`)
+
+	svg.append("text").text("Europe").style("font-size", "15px").attr("alignment-baseline","middle").attr('transform', `translate(${x(5500) + 30}, ${y(45)})`)
+	svg.append("text").text("Japan").style("font-size", "15px").attr("alignment-baseline","middle").attr('transform', `translate(${x(5500) + 30}, ${y(43)})`)
+	svg.append("text").text("USA").style("font-size", "15px").attr("alignment-baseline","middle").attr('transform', `translate(${x(5500) + 30}, ${y(41)})`)
+
+	// A bit more automated for the years, the pattern is the same
+	years = [1970, 1971, 1972, 1973, 1974, 1975, 1976, 1977, 1978, 1979, 1980, 1981, 1982]
+
+	years.forEach((e, i) => {
+		svg.append("rect").attr("width", "10").attr("height", "10").style("fill", `${carsYears(e)}`).attr('transform', `translate(${x(5500) + 5}, ${y(36 - i*2)-10})`)
+		svg.append("text").text(e).style("font-size", "15px").attr("alignment-baseline","middle").attr('transform', `translate(${x(5500) + 30}, ${y(36 - i*2)})`)
+	});
+
+});
+
+		</script>
+	</body>
+</html>

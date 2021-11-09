@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style type="text/css" media="screen, print">
+			body  { margin: 30px 50px; font-family: sans-serif; }
+			div   { float: left; margin: 10px; }
+			table { border: 1px solid black; width: 12em;}
+			td    { text-align: right; padding: 0 0 0 10px; }
+		</style>
+		<title>Anscombe's quartet</title>
+	</head>
+	<body>
+		<header>
+			<a href="..">&larr; Back to the main menu</a>
+		</header>
+		<h1>Anscombe's quartet</h1>
+
+		<script src="../vendor/d3/d3.js"></script>
+		<script>
+
+var body = d3.select("body");
+var divs = {
+	'1': body.append('div'),
+	'2': body.append('div'),
+	'3': body.append('div'),
+	'4': body.append('div'),
+};
+
+// Useful margins and scales
+var margin = {top: 10, right: 10, bottom: 20, left: 20},
+    width  = 240 - margin.left - margin.right,
+    height = 150 - margin.top - margin.bottom;
+
+var x = d3.scaleLinear()
+    .range([0, width]);
+
+var y = d3.scaleLinear()
+    .range([height, 0]);
+
+var s = d3.formatSpecifier("f");
+s.precision = d3.precisionFixed(0.01);
+var f = d3.format(s);
+
+d3.tsv("../data/anscombe.tsv", d => (
+	{
+		dataset:     d.dataset,
+		observation: d.observation,
+		x: +d.x,
+		y: +d.y,
+	}
+)).then(function(data) {
+	// Nice, nicer, nicest
+	x.domain([0, 20]).nice();
+    y.domain([0, 13]).nice();
+	for(k in divs) {
+		var div = divs[k];
+		div.append('p')
+            .text(`data set ${k}`);
+
+        var svg = div.append('svg')
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+		
+		var g = svg.selectAll('.row')
+            .data(data.filter(d => d.dataset == k))
+          .enter().append('circle')
+            .attr('class', 'row')
+            .attr('transform', d => `translate(${x(d.x)},${y(d.y)})`)
+            .attr('r', 2);
+
+			var xAxis = d3.axisBottom(x);
+        svg.append('g')
+            .attr('transform', `translate(0,${y(0)})`)
+            .call(xAxis.ticks(20/5).tickSize(-10));
+        svg.append('g')
+            .attr('transform', `translate(0,${y(0)})`)
+            .call(xAxis.ticks(20/1).tickSize(-5).tickFormat(''));
+
+        var yAxis = d3.axisLeft(y);
+        svg.append('g')
+            .attr('transform', `translate(${x(0)})`)
+            .call(yAxis.ticks(13/5).tickSize(-10));
+        svg.append('g')
+            .attr('transform', `translate(${x(0)})`)
+            .call(yAxis.ticks(13/1).tickSize(-5).tickFormat(''));
+		
+		/*var table = div.append('table');
+		table.append('caption')
+			.text(`data set ${k}`);
+		
+		var header = table.append('tr');
+		header.append('th')
+			.text('observation');
+		header.append('th')
+			.text('x');
+		header.append('th')
+			.text('y');
+		
+		var row = table.selectAll('.row')
+    		.data(data.filter(d => d.dataset == k))
+		  .enter().append('tr')
+		    .attr('class', 'row');
+		    
+		row.append('td')
+			.text(d => d.observation);
+		row.append('td')
+			.text(d => d.x);
+		row.append('td')
+			.text(d => f(d.y));*/
+	};
+
+});
+
+		</script>
+	</body>
+</html>
